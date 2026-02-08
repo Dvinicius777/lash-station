@@ -1,19 +1,17 @@
 from flask import Flask, render_template, request, jsonify
 import google.generativeai as genai
-import PIL.Image
 import os
 
 app = Flask(__name__)
 
-# --- CONFIGURAÇÃO BLINDADA ---
-# 1. Tenta pegar a chave do servidor (Render/Heroku)
-CHAVE_API_GOOGLE = os.getenv("CHAVE_API_GOOGLE") 
-
-# 2. Se não achar (ou seja, se estiver no seu PC), usa essa fixa:
+CHAVE_API_GOOGLE = os.getenv("CHAVE_API_GOOGLE")
 if not CHAVE_API_GOOGLE:
-    CHAVE_API_GOOGLE = "AIzaSyCwS-qwEmr8ZnMIYIKaWkHcmCTR9qKAf2k"
+    raise RuntimeError("CHAVE_API_GOOGLE não definida")
 
 genai.configure(api_key=CHAVE_API_GOOGLE)
+
+modelo = genai.GenerativeModel("gemini-1.0-pro")
+
 
 # --- AUTO-DETECÇÃO INTELIGENTE ---
 nome_modelo_atual = "gemini-1.5-flash" 
@@ -63,4 +61,5 @@ def lash_vision():
 if __name__ == '__main__':
     # O servidor usa o Gunicorn, então ele ignora isso.
     # O seu PC usa isso para rodar.
+
     app.run(host='0.0.0.0', port=5000, debug=True)
