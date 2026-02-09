@@ -5,14 +5,7 @@ from PIL import Image
 
 app = Flask(__name__)
 
-# --- DIAGNÓSTICO (VAI APARECER NO LOG DO RENDER) ---
-print("="*30)
-try:
-    print(f"🔎 VERSÃO DA BIBLIOTECA: {genai.__version__}")
-except:
-    print("🔎 VERSÃO DA BIBLIOTECA: Não consegui ler!")
-print("="*30)
-
+# --- CONFIGURAÇÃO DA CHAVE ---
 CHAVE_API_GOOGLE = os.getenv("CHAVE_API_GOOGLE")
 if CHAVE_API_GOOGLE:
     genai.configure(api_key=CHAVE_API_GOOGLE)
@@ -21,30 +14,24 @@ if CHAVE_API_GOOGLE:
 def home():
     return render_template('index.html')
 
+# --- ROTA 1: CHAT (USANDO O MODELO CLÁSSICO) ---
 @app.route('/api/lash_chat', methods=['POST'])
 def lash_chat():
     try:
         dados = request.json
         msg = dados.get('msg', '')
         
-        # TENTATIVA 1: Usa o modelo Flash (Novo)
-        # Se der erro, vamos ver no log
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        # TROCAMOS O 'flash' PELO 'gemini-pro' (QUE FUNCIONA EM TUDO)
+        model = genai.GenerativeModel("gemini-pro")
         
-        prompt = f"Aja como Mentora Lash. Responda curto: {msg}"
+        prompt = f"Aja como Mentora Lash. Responda curto e com carinho: {msg}"
         response = model.generate_content(prompt)
         return jsonify({'resposta': response.text})
     except Exception as e:
-        print(f"❌ ERRO NO CHAT: {e}")
-        # TENTATIVA 2: Se o Flash falhar, tenta o Pro (Antigo/Garantido)
-        try:
-            print("🔄 Tentando modelo antigo (gemini-pro)...")
-            model_old = genai.GenerativeModel("gemini-pro")
-            response = model_old.generate_content(prompt)
-            return jsonify({'resposta': response.text + " (Respondido pelo modelo backup)"})
-        except Exception as e2:
-            return jsonify({'resposta': f"Erro total: {e} | {e2}"})
+        print(f"❌ ERRO CHAT: {e}")
+        return jsonify({'resposta': "Amiga, tenta de novo? A conexão oscilou! ✨"})
 
+# --- ROTA 2: VISÃO (USANDO O MODELO CLÁSSICO DE VISÃO) ---
 @app.route('/api/lash_vision', methods=['POST'])
 def visagismo():
     if 'imagem' not in request.files: return jsonify({"resposta": "Cadê a foto?"}), 400
@@ -56,15 +43,23 @@ def visagismo():
         if img.mode != 'RGB': img = img.convert('RGB')
         img.thumbnail((1024, 1024))
 
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # TROCAMOS O 'flash' PELO 'gemini-pro-vision' (ESPECÍFICO PARA FOTOS ANTIGO)
+        model = genai.GenerativeModel('gemini-pro-vision')
         
-        prompt = "Analise este olho para extensão de cílios. Formato e Mapping recomendado."
+        prompt = """
+        Atue como Lash Designer. Analise este olho.
+        Responda neste formato:
+        FORMATO: [Ex: Amendoado]
+        MAPPING: [Ex: Gatinho]
+        DICA: [Breve explicação]
+        """
+        
         response = model.generate_content([prompt, img])
         return jsonify({"resposta": response.text})
 
     except Exception as e:
         print(f"❌ ERRO VISION: {e}")
-        return jsonify({"resposta": f"Erro técnico: {e}"}), 500
+        return jsonify({"resposta": "O servidor não conseguiu ler a foto. Tente outra! 🙏"}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
