@@ -43,23 +43,55 @@ def lash_chat():
         print(f"Erro Chat: {e}")
         return jsonify({'resposta': "Amiga, a conexão com a IA oscilou. Tente de novo! ✨"})
 
-# --- VISAGISMO ---
-@app.route('/api/lash_vision', methods=['POST'])
-def lash_vision():
-    if 'imagem' not in request.files: return jsonify({'resposta': "Cadê a foto? 📸"})
+# --- ROTA DE VISAGISMO (ATUALIZADA) ---
+@app.route('/visagismo', methods=['POST'])
+def visagismo():
+    if 'foto' not in request.files:
+        return jsonify({"erro": "Nenhuma foto enviada."}), 400
     
+    arquivo = request.files['foto']
+    if arquivo.filename == '':
+        return jsonify({"erro": "Nenhuma foto selecionada."}), 400
+
     try:
-        img = PIL.Image.open(request.files['imagem'])
-        prompt = "Analise esse olho para extensão de cílios. Diga: 1. Formato 2. Mapping Ideal. Seja breve."
+        # 1. Abre a imagem usando PIL
+        img = PIL.Image.open(arquivo.stream)
+
+        # 2. Converte para RGB (caso seja PNG com fundo transparente)
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+
+        # 3. REDIMENSIONA A IMAGEM (O Pulo do Gato 🐱)
+        # Limita o tamanho máximo para 1024px (suficiente pra IA e leve pro servidor)
+        img.thumbnail((1024, 1024))
+
+        # 4. Configura a IA para visão
+        model_vision = genai.GenerativeModel('gemini-1.5-flash')
         
-        response = model.generate_content([prompt, img])
-        return jsonify({'resposta': response.text})
+        # 5. O Prompt Especialista
+        prompt = """
+        Atue como uma especialista em Visagismo para Extensão de Cílios (Lash Designer).
+        Analise a foto deste olho e responda APENAS com este formato:
+        
+        FORMATO DO OLHO: (Ex: Amendoado, Asiático, Caído, Profundo, Grande, etc)
+        MAPPING RECOMENDADO: (Ex: Boneca, Gatinho, Esquilo, Natural)
+        JUSTIFICATIVA: (Explique em 1 frase curta por que esse mapping combina com esse olho).
+        
+        Se a imagem não for de um olho ou rosto, responda: "Não consegui identificar um olho nítido na imagem."
+        """
+
+        # 6. Envia para o Gemini
+        response = model_vision.generate_content([prompt, img])
+        
+        return jsonify({"analise": response.text})
+
     except Exception as e:
-        print(f"Erro Vision: {e}")
-        return jsonify({'resposta': "⚠️ Não consegui ver a foto. Tente outra!"})
+        print(f"Erro no Visagismo: {e}") # Isso vai aparecer no log do Render se der erro
+        return jsonify({"erro": "Não consegui processar a imagem. Tente uma foto mais leve ou com menos zoom!"}), 500
 
 if __name__ == '__main__':
     # O servidor usa o Gunicorn, então ele ignora isso.
     # O seu PC usa isso para rodar.
 
     app.run(host='0.0.0.0', port=5000, debug=True)
+
