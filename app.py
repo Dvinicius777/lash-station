@@ -5,7 +5,6 @@ from PIL import Image
 
 app = Flask(__name__)
 
-# --- CONFIGURAÇÃO DA CHAVE ---
 CHAVE_API_GOOGLE = os.getenv("CHAVE_API_GOOGLE")
 if CHAVE_API_GOOGLE:
     genai.configure(api_key=CHAVE_API_GOOGLE)
@@ -14,14 +13,12 @@ if CHAVE_API_GOOGLE:
 def home():
     return render_template('index.html')
 
-# --- ROTA 1: CHAT (USANDO O MODELO CLÁSSICO) ---
 @app.route('/api/lash_chat', methods=['POST'])
 def lash_chat():
     try:
         dados = request.json
         msg = dados.get('msg', '')
         
-        # TROCAMOS O 'flash' PELO 'gemini-pro' (QUE FUNCIONA EM TUDO)
         model = genai.GenerativeModel("gemini-pro")
         
         prompt = f"Aja como Mentora Lash. Responda curto e com carinho: {msg}"
@@ -31,7 +28,6 @@ def lash_chat():
         print(f"❌ ERRO CHAT: {e}")
         return jsonify({'resposta': "Amiga, tenta de novo? A conexão oscilou! ✨"})
 
-# --- ROTA 2: VISÃO (USANDO O MODELO CLÁSSICO DE VISÃO) ---
 @app.route('/api/lash_vision', methods=['POST'])
 def visagismo():
     if 'imagem' not in request.files: return jsonify({"resposta": "Cadê a foto?"}), 400
@@ -43,7 +39,6 @@ def visagismo():
         if img.mode != 'RGB': img = img.convert('RGB')
         img.thumbnail((1024, 1024))
 
-        # TROCAMOS O 'flash' PELO 'gemini-pro-vision' (ESPECÍFICO PARA FOTOS ANTIGO)
         model = genai.GenerativeModel('gemini-pro-vision')
         
         prompt = """
